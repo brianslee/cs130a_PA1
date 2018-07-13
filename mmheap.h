@@ -1,0 +1,36 @@
+#include <cstdint>
+#include <vector>
+
+namespace minmaxheap
+{
+
+class mmheap
+{
+public:
+  mmheap (uint32_t capacity);//Done
+  virtual ~mmheap ();//Done
+  void buildHeap (const std::vector<int32_t> &vals);//Done
+  int32_t getMin () const;//Done
+  int32_t getMax () const;//Done
+  void insert (int32_t val);//Done
+  void deleteMin ();//Done
+  void deleteMax ();//Done
+
+private:
+  bool isAtMinLevel (uint32_t index) const;//Done
+  void percolateDown (uint32_t index);//Done
+  void percolateDownMin (uint32_t index);//Done
+  void percolateDownMax (uint32_t index);//Done
+  void percolateUp (uint32_t index);//Done
+  void percolateUpMin (uint32_t index);//Done
+  void percolateUpMax (uint32_t index);//Done
+  // add your own private functions here, if any
+
+private:
+  
+  int32_t *_arr;
+  uint32_t _capacity;
+  uint32_t _size;
+};
+ 
+} /* minmaxheap */ 

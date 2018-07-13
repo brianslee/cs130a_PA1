@@ -1,0 +1,482 @@
+#include <iostream>
+#include "mmheap.h"
+#include <cstdint>
+#include <vector>
+#include <cstddef>
+using namespace std;
+
+namespace minmaxheap
+{
+  //Constructor
+  mmheap::mmheap (uint32_t capacity)
+  {
+    _capacity = capacity;//set capacity to the given value
+    _size = 0;//set size to zero
+    _arr = new int32_t[capacity];//allocate an array of size capacity to _arr
+  }
+
+  //Destructor
+  mmheap::~mmheap ()
+  {
+    for(int32_t *i = _arr; i < _arr+_size; ++i)
+      {
+	delete i;
+	i = NULL;
+      }
+  }
+
+  //find if you're at a min level
+  bool mmheap::isAtMinLevel (uint32_t index) const
+  {
+    int32_t c = 0;//level counter
+    int32_t i = index;//current index
+    while(i > 0)// until indicator reaches 0
+      {
+	i = (i - 1) / 2;//go up to the current index's parent
+	c++;//increase the counter
+      }
+    if(c % 2 == 0)//if the counter is even
+      {
+	return true;//the index was a min level
+      }
+    return false;//otherwise, it's a max level
+  }
+
+  //Drop element down according to pdf pseudocode
+  void mmheap::percolateDown (uint32_t index)
+  {
+    //If the current level is a Min level
+    if(isAtMinLevel (index))
+      {
+	percolateDownMin(index);
+      }
+    //If the current level is a Max level
+    else
+      {
+	percolateDownMax(index);
+      }
+  }
+
+  //helper-Percolate Down for Min according to pdf pseudocode
+  void mmheap::percolateDownMin (uint32_t index)
+  {
+    //index of the smallest child or grandchild
+    int32_t m;
+    //indexes of this node's children
+    int32_t c1i = (index * 2) + 1;
+    int32_t c2i = (index * 2) + 2;
+    //indexes of this node's grandchildren
+    int32_t g1i = (c1i * 2) + 1;
+    int32_t g2i = (c1i * 2) + 2;
+    int32_t g3i = (c2i * 2) + 1;
+    int32_t g4i = (c2i * 2) + 2;
+    //creating the pointers that will point to the descendents
+    int32_t *c1;
+    int32_t *c2;
+    int32_t *g1;
+    int32_t *g2;
+    int32_t *g3;
+    int32_t *g4;
+    //pointing the pointers to the proper descendents
+    c1 = _arr + c1i;
+    c2 = _arr + c2i;
+    g1 = _arr + g1i;
+    g2 = _arr + g2i;
+    g3 = _arr + g3i;
+    g4 = _arr + g4i;
+    //contianer to hold values for a swap
+    int32_t temp;
+    //value of smallest descendent's parent
+    int32_t mPar;
+
+    //if the node has children
+    if(c1 != NULL || c2 != NULL)
+      {
+	//set the smaller child's index as m and the current node's index as mPar
+	if(*c1 < *c2)
+	  {
+	    m = c2i;
+	    mPar = index;
+	  }//close if(*c1 < *c2)
+	else
+	  {
+	    m = c1i;
+	    mPar = index;
+	  }//close else
+	//if grandchildren exist, then check if they are smaller than m
+	//if so, then replace m with that grandchild and mPar with it's parent
+	if(g1 != NULL)
+	  {
+	    if(*(_arr + m) > *g1)
+	      {
+		m = g1i;
+		mPar = c1i;
+	      }//close if(*(_arr + m) > *g1)
+	  }//close if(g1 != NULL)
+	if(g2 != NULL)
+	  {
+	    if(*(_arr + m) > *g2)
+	      {
+		m = g2i;
+		mPar = c1i;
+	      }//close if(*(_arr + m) > *g2)
+	  }//close if(g2 != NULL)
+	if(g3 != NULL)
+	  {
+	    if(*(_arr + m) > *g3)
+	      {
+		m = g3i;
+		mPar = c2i;
+	      }//close if(*(_arr + m) > *g3)
+	  }//close if(g3 != NULL)
+	if(g4 != NULL)
+	  {
+	    if(*(_arr + m) > *g4)
+	      {
+		m = g4i;
+		mPar = c2i;
+	      }//close if(*(_arr + m) > *g4)
+	  }//close if(g4 != NULL)
+
+	//if m is a grandchild
+	if(m == g1i || m == g2i || m == g3i || m == g4i)
+	  {
+	    //if m is larger than the current node
+	    if(*(_arr + m) > *(_arr + index))
+	      {
+		//swap their values
+		temp = *(_arr + index);
+		*(_arr + index) = *(_arr + m);
+		*(_arr + m) = index;
+		//if m is larger than its parent in the Max level
+		if(*(_arr + m) > *(_arr + mPar))
+		  {
+		    //swap their values
+		    temp = *(_arr + m);
+		    *(_arr + m) = *(_arr + mPar);
+		    *(_arr + mPar) = temp;
+		  }//close if(*(_arr + m) > *(_arr + mPar))
+		//send down the current grandchild
+		percolateDownMin(m);
+	      }//close if(*(_arr + m) > *(_arr + index))
+	  }//close if(m == g1i || m == g2i || m == g3i || m == g4i)
+	
+	//if m is not a grandchild, i.e. m is a child
+	else
+	  {
+	    //if the child (in the max level) is smaller than the parent
+	    if(*(_arr + m) < *(_arr + index))
+	      {
+		//swap their values
+		temp = *(_arr + index);
+		*(_arr + index) = *(_arr + m);
+		*(_arr + m) = temp;
+	      }//close if(*(_arr + m) < *(_arr + index))
+	  }//close else
+      }
+    //remove dangling pointers
+    c1, c2, g1, g2, g3, g4 = NULL;
+  }
+
+  //Helper-Percolate Down for Max accoding to pdf pseudocode
+  void mmheap::percolateDownMax (uint32_t index)
+  {
+    //index of the smallest child or grandchild
+    int32_t m;
+    //indexes of this node's children
+    int32_t c1i = (index * 2) + 1;
+    int32_t c2i = (index * 2) + 2;
+    //indexes of this node's grandchildren
+    int32_t g1i = (c1i * 2) + 1;
+    int32_t g2i = (c1i * 2) + 2;
+    int32_t g3i = (c2i * 2) + 1;
+    int32_t g4i = (c2i * 2) + 2;
+    //creating the pointers that will point to the descendents
+    int32_t *c1;
+    int32_t *c2;
+    int32_t *g1;
+    int32_t *g2;
+    int32_t *g3;
+    int32_t *g4;
+    //pointing the pointers to the proper descendents
+    c1 = _arr + c1i;
+    c2 = _arr + c2i;
+    g1 = _arr + g1i;
+    g2 = _arr + g2i;
+    g3 = _arr + g3i;
+    g4 = _arr + g4i;
+    //contianer to hold values for a swap
+    int32_t temp;
+    //value of smallest descendent's parent
+    int32_t mPar;
+
+    //if the node has children
+    if(c1 != NULL || c2 != NULL)
+      {
+	//set the larger child's index as m and the current node's index as mPar
+	if(*c1 > *c2)
+	  {
+	    m = c2i;
+	    mPar = index;
+	  }//close if(*c1 > *c2)
+	else
+	  {
+	    m = c1i;
+	    mPar = index;
+	  }//close else
+	//if grandchildren exist, then check if they are larger than m
+	//if so, then replace m with that grandchild and mPar with it's parent
+	if(g1 != NULL)
+	  {
+	    if(*(_arr + m) < *g1)
+	      {
+		m = g1i;
+		mPar = c1i;
+	      }//close if(*(_arr + m) < *g1)
+	  }//close if(g1 != NULL)
+	if(g2 != NULL)
+	  {
+	    if(*(_arr + m) < *g2)
+	      {
+		m = g2i;
+		mPar = c1i;
+	      }//close if(*(_arr + m) < *g2)
+	  }//close if(g2 != NULL)
+	if(g3 != NULL)
+	  {
+	    if(*(_arr + m) < *g3)
+	      {
+		m = g3i;
+		mPar = c2i;
+	      }//close if(*(_arr + m) < *g3)
+	  }//close if(g3 != NULL)
+	if(g4 != NULL)
+	  {
+	    if(*(_arr + m) < *g4)
+	      {
+		m = g4i;
+		mPar = c2i;
+	      }//close if(*(_arr + m) < *g4)
+	  }//close if(g4 != NULL)
+
+	//if m is a grandchild
+	if(m == g1i || m == g2i || m == g3i || m == g4i)
+	  {
+	    //if m is smaller than the current node
+	    if(*(_arr + m) < *(_arr + index))
+	      {
+		//swap their values
+		temp = *(_arr + index);
+		*(_arr + index) = *(_arr + m);
+		*(_arr + m) = index;
+		//if m is smaller than its parent in the Min level
+		if(*(_arr + m) < *(_arr + mPar))
+		  {
+		    //swap their values
+		    temp = *(_arr + m);
+		    *(_arr + m) = *(_arr + mPar);
+		    *(_arr + mPar) = temp;
+		  }//close if(*(_arr + m) < *(_arr + mPar))
+		//send down the current grandchild
+		percolateDownMin(m);
+	      }//close if(*(_arr + m) < *(_arr + index))
+	  }//close if(m == g1i || m == g2i || m == g3i || m == g4i)
+	
+	//if m is not a grandchild, i.e. m is a child
+	else
+	  {
+	    //if the child (in the min level) is smaller than the parent
+	    if(*(_arr + m) > *(_arr + index))
+	      {
+		//swap their values
+		temp = *(_arr + index);
+		*(_arr + index) = *(_arr + m);
+		*(_arr + m) = temp;
+	      }//close if(*(_arr + m) > *(_arr + index))
+	  }//close else
+      }
+    //remove dangling pointers
+    c1, c2, g1, g2, g3, g4 = NULL;
+  }
+
+  //Percolate Up function according to pdf pseudocode
+  void mmheap::percolateUp (uint32_t index)//segfault related?
+  {
+    //if this is a Min Level
+    if(isAtMinLevel(index))
+      {
+	//if there is a parent(at a Max Level)
+	if((_arr + ((index - 1) / 2)) != NULL)
+	  {
+	    //if the current value is greater than its parent(in the Max Level)
+	    if(*(_arr + index) > *(_arr + ((index - 1) / 2)))
+	      {
+		//swap the values of the two
+		int32_t temp = *(_arr + index);
+		*(_arr + index) = *(_arr + ((index - 1) / 2));
+		*(_arr + ((index - 1) / 2)) = temp;
+		//Send up the parent
+		percolateUpMax((index - 1) / 2);
+	      }//closes if statement for parent comparison
+	    else
+	      {
+		percolateUpMin(index);
+	      }//closes else statement for parent comparison
+	  }//closes the if a parent exists statement
+      }//closes Min Level if statement
+
+    //if on Max Level
+    else
+      {
+	//if a parent exists(in the min level)
+	if((_arr + ((index - 1) / 2) != NULL))
+	  {
+	    //if the value at the index is less than its parent
+	    if(*(_arr + index) < *(_arr + ((index - 1) / 2)))
+	      {
+		//swap values
+		int32_t temp = *(_arr + index);
+		*(_arr + index) = *(_arr + ((index - 1) / 2));
+		*(_arr + ((index - 1) / 2)) = temp;
+		percolateUpMin((index - 1) / 2);
+	      }
+	    //if the value is greater than its parent
+	    else
+	      {
+		percolateUpMax(index);
+	      }
+	  }
+      }
+  }
+
+  //Percolate Up Min function according to pdf pseudocode
+  void mmheap::percolateUpMin (uint32_t index)//segfault related?
+  {
+    //if there is a grandparent
+    if(_arr + ((((index - 1) / 2) - 1) / 2) != NULL)
+      {
+	//if that grandparent is larger than the current index
+	if(*(_arr + index) < *(_arr + ((((index - 1) / 2) - 1) / 2)))
+	  {
+	    //swap their values
+	    int32_t temp = *(_arr + index);
+	    *(_arr + index) = *(_arr + ((((index - 1) / 2) - 1) / 2));
+	    *(_arr + ((((index - 1) / 2) - 1) / 2)) = temp;
+	  }
+      }
+  }
+
+  //Percolate Up Max function according to pdf pseudocode
+  void mmheap::percolateUpMax (uint32_t index)//segfault related?
+  {
+    //if there is a grandparent
+    if(_arr + ((((index - 1) / 2) - 1) / 2) != NULL)
+      {
+	//if that grandparent is smaller than the current index
+	if(*(_arr + index) > *(_arr + ((((index - 1) / 2) - 1) / 2)))
+	  {
+	    //swap their values
+	    int32_t temp = *(_arr + index);
+	    *(_arr + index) = *(_arr + ((((index - 1) / 2) - 1) / 2));
+	    *(_arr + ((((index - 1) / 2) - 1) / 2)) = temp;
+	  }
+      }
+  }
+
+  //insert function
+  void mmheap::insert(int32_t val)//segfault related?
+  {
+    //set the value of the last leaf to the inserted value
+    *(_arr + _size) = val;
+    //restore order
+    percolateUp(_size);
+    //increase size
+    _size += 1;
+  }
+
+  //buildHeap function
+  void mmheap::buildHeap (const vector<int32_t> &vals)//causes segfault
+  {
+    //take each value in the vector
+    for(int i = 0; i < vals.size(); i++)
+      {
+	//insert it into the heap
+	*(_arr + i) = vals.at(i);
+	percolateUp(i);
+      }
+    _size = vals.size();//set _size to the size of the vector
+  }
+
+  //getMin function
+  int32_t mmheap::getMin () const
+  {
+    //return min value (first value in heap)
+    return *_arr;
+  }
+
+  //getMax function
+  int32_t mmheap::getMax () const
+  {
+    //if max value is first child
+    if(*(_arr + 1) > *(_arr + 2))
+      {
+	//return max value
+	return *(_arr + 1);
+      }
+    //if max value is second child
+    else
+      {
+	//return max value
+	return *(_arr + 2);
+      }
+  }
+
+  //deleteMin function
+  void mmheap::deleteMin ()
+  {
+    //set min value to last leaf in heap
+    *_arr = *(_arr + _size - 1);
+    //delete last leaf
+    delete (_arr + _size - 1);
+    //restore order
+    percolateDown(0);
+    //reduce size
+    _size -= 1;
+  }
+
+  //deleteMax function
+  void mmheap::deleteMax ()
+  {
+    //if there is only one thing on the heap
+    //just delete it and return
+    if(_size == 1)
+      {
+	delete(_arr);
+	_size = 0;
+	return;
+      }
+
+    //if max value is first child
+    if(*(_arr + 1) > *(_arr + 2))
+      {
+	//set max value to last leaf in heap
+	*(_arr + 1) = *(_arr + _size - 1);
+	//delete last leaf
+	delete (_arr + _size - 1);
+	//restore order
+	percolateDown(1);
+      }
+    //if max value is second child
+    else
+      {
+	//set max value to last leaf in heap
+	*(_arr + 2) = *(_arr + _size - 1);
+	//delete last leaf
+	delete (_arr + _size - 1);
+	//restore order
+	percolateDown(2);
+      }
+    //reduce size
+    _size -= 1;
+  }
+}
